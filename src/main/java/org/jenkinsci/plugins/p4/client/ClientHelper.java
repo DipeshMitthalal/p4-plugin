@@ -66,6 +66,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import org.jenkinsci.plugins.p4.populate.FlushOnlyImpl;
 
 public class ClientHelper extends ConnectionHelper {
 
@@ -181,7 +182,7 @@ public class ClientHelper extends ConnectionHelper {
 				}
 			}
 		} else {
-			log("P4 Task: syncing files at change: " + buildChange);
+			log("P4 Task: syncing files at changes: " + buildChange);
 		}
 
 		// build file revision spec
@@ -189,10 +190,10 @@ public class ClientHelper extends ConnectionHelper {
 		String revisions = path + "@" + buildChange;
 
 		// Sync files
-		if (populate instanceof CheckOnlyImpl) {
-			syncHaveList(revisions, populate);
+		if (populate instanceof CheckOnlyImpl || populate instanceof FlushOnlyImpl) {
+                    syncHaveList(revisions, populate);
 		} else {
-			syncFiles(revisions, populate);
+                    syncFiles(revisions, populate);
 		}
 
 		log("duration: " + timer.toString() + "\n");
@@ -206,7 +207,7 @@ public class ClientHelper extends ConnectionHelper {
 	private boolean syncHaveList(String revisions, Populate populate) throws Exception {
 		// Preview (sync -k)
 		SyncOptions syncOpts = new SyncOptions();
-		syncOpts.setClientBypass(true);
+		syncOpts.setClientBypass(populate.isHave());
 		syncOpts.setQuiet(populate.isQuiet());
 
 		List<IFileSpec> files = FileSpecBuilder.makeFileSpecList(revisions);
@@ -245,7 +246,7 @@ public class ClientHelper extends ConnectionHelper {
 		// setForceUpdate (-f only if no -p is set)
 		syncOpts.setForceUpdate(populate.isForce() && populate.isHave());
 		syncOpts.setQuiet(populate.isQuiet());
-
+                
 		// Check if we need to use the native p4 and not p4java
 		ParallelSync parallel = populate.getParallel();
 		if (parallel != null && parallel.isEnable()) {
